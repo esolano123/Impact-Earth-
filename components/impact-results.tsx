@@ -1,0 +1,301 @@
+"use client"
+
+import { Card } from "@/components/ui/card"
+import { AlertTriangle, Flame, Wind, Waves, Shield, Users, Home, AlertCircle, MapPin } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TooltipInfo } from "@/components/tooltip-info"
+import { calculateMLImpactPredictions } from "@/lib/nasa-utils"
+
+interface ImpactResultsProps {
+  params: {
+    diameter: number
+    density: number
+    impactVelocity: number
+    distanceFromImpact: number
+    latitude: number
+    longitude: number
+    targetType: string
+    impactAngle: number
+  }
+}
+
+export function ImpactResults({ params }: ImpactResultsProps) {
+  const predictions = calculateMLImpactPredictions({
+    diameter: params.diameter,
+    velocity: params.impactVelocity,
+    density: params.density,
+    angle: params.impactAngle,
+    targetType: params.targetType,
+  })
+
+  const energyMegatons = predictions.energyMegatons
+  const craterDiameter = predictions.craterDiameter
+  const seismicMagnitude = predictions.seismicMagnitude
+  const thermalRadius = predictions.thermalRadius
+  const blastRadius = predictions.blastRadius
+  const safeDistance = predictions.safeDistance
+
+  const isInDangerZone = params.distanceFromImpact < Number.parseFloat(blastRadius)
+
+  const isCoastal =
+    Math.abs(params.latitude) < 60 &&
+    ((params.longitude > -130 && params.longitude < -60) || // Americas coasts
+      (params.longitude > -10 && params.longitude < 50) || // Europe/Africa coasts
+      (params.longitude > 100 && params.longitude < 180)) // Asia/Pacific coasts
+
+  const isNearEquator = Math.abs(params.latitude) < 23.5
+  const isOceanicImpact = params.targetType === "water"
+
+  const getThreatLevel = () => {
+    if (Number.parseFloat(energyMegatons) > 100000) return "EXTINCTION"
+    if (Number.parseFloat(energyMegatons) > 10000) return "CIVILIZATION"
+    if (Number.parseFloat(energyMegatons) > 1000) return "REGIONAL"
+    return "LOCAL"
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6 bg-destructive/20 border-destructive backdrop-blur">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-6 w-6 text-destructive" />
+          <h3 className="text-xl font-bold text-foreground">Impact Results</h3>
+        </div>
+
+        <Tabs defaultValue="impact" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-background/50">
+            <TabsTrigger value="impact" className="text-base font-semibold">
+              Impact Data
+            </TabsTrigger>
+            <TabsTrigger value="safety" className="text-base font-semibold">
+              Safety Info
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="impact" className="space-y-4 mt-4">
+            <div className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border border-border">
+              <Flame className="h-6 w-6 text-chart-5 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-base font-semibold text-foreground flex items-center">
+                  Energy Released
+                  <TooltipInfo content="Total kinetic energy converted to explosive force upon impact, measured in megatons of TNT equivalent" />
+                </p>
+                <p className="text-3xl font-bold text-chart-5 font-mono">{energyMegatons} Megatons</p>
+                <p className="text-sm text-muted-foreground mt-1 font-medium">
+                  Equivalent to {(Number.parseFloat(energyMegatons) / 15).toFixed(3)}x Hiroshima bomb
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border border-border">
+              <Wind className="h-6 w-6 text-chart-2 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-base font-semibold text-foreground flex items-center">
+                  Crater Diameter
+                  <TooltipInfo content="Estimated diameter of the impact crater formed by the asteroid collision" />
+                </p>
+                <p className="text-3xl font-bold text-chart-2 font-mono">{craterDiameter} km</p>
+                <p className="text-sm text-muted-foreground mt-1 font-medium">
+                  Approximately {(Number.parseFloat(craterDiameter) * 0.621).toFixed(3)} miles across
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border border-border">
+              <Waves className="h-6 w-6 text-chart-1 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-base font-semibold text-foreground flex items-center">
+                  Seismic Magnitude
+                  <TooltipInfo content="Earthquake intensity generated by the impact, measured on the Richter scale" />
+                </p>
+                <p className="text-3xl font-bold text-chart-1 font-mono">{seismicMagnitude}</p>
+                <p className="text-sm text-muted-foreground mt-1 font-medium">
+                  Richter scale equivalent at {params.distanceFromImpact.toFixed(3)} km distance
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-destructive/30 rounded-lg border-2 border-destructive">
+              <p className="text-base text-foreground font-bold mb-2">Threat Assessment: {getThreatLevel()} LEVEL</p>
+              <p className="text-sm text-foreground font-medium">
+                {getThreatLevel() === "EXTINCTION"
+                  ? "Global catastrophe - Mass extinction event"
+                  : getThreatLevel() === "CIVILIZATION"
+                    ? "Continental devastation - Civilization-ending impact"
+                    : getThreatLevel() === "REGIONAL"
+                      ? "Widespread destruction across multiple countries"
+                      : "Significant regional damage - Local catastrophe"}
+              </p>
+            </div>
+
+            <div className="p-4 bg-chart-5/20 rounded-lg border border-chart-5">
+              <div className="flex items-center gap-2 mb-3">
+                <MapPin className="h-5 w-5 text-chart-5" />
+                <h4 className="text-lg font-bold text-foreground">Location-Specific Hazards</h4>
+              </div>
+              <div className="space-y-3">
+                {isOceanicImpact && (
+                  <div className="p-3 bg-destructive/20 rounded border border-destructive">
+                    <p className="text-sm font-bold text-foreground mb-1 flex items-center gap-2">
+                      <Waves className="h-4 w-4" />
+                      TSUNAMI WARNING - Oceanic Impact
+                    </p>
+                    <p className="text-sm text-foreground font-medium">
+                      This impact occurs in water, generating massive tsunami waves. Coastal regions within 1,000+ km
+                      face catastrophic flooding within 1-3 hours. Wave heights could exceed 50 meters near the impact
+                      zone.
+                    </p>
+                  </div>
+                )}
+                {isCoastal && !isOceanicImpact && (
+                  <div className="p-3 bg-chart-5/20 rounded border border-chart-5">
+                    <p className="text-sm font-bold text-foreground mb-1">Coastal Proximity Alert</p>
+                    <p className="text-sm text-foreground font-medium">
+                      This location is near major coastlines. Even land impacts can trigger localized tsunamis from
+                      seismic activity. Coastal evacuation may be necessary.
+                    </p>
+                  </div>
+                )}
+                {isNearEquator && (
+                  <div className="p-3 bg-chart-4/20 rounded border border-chart-4">
+                    <p className="text-sm font-bold text-foreground mb-1">Equatorial Region Impact</p>
+                    <p className="text-sm text-foreground font-medium">
+                      Impacts near the equator can inject massive amounts of debris into orbit, potentially affecting
+                      satellites and creating long-term atmospheric effects across both hemispheres.
+                    </p>
+                  </div>
+                )}
+                <div className="p-3 bg-background/50 rounded border border-border">
+                  <p className="text-sm text-foreground font-medium">
+                    For detailed information on how to prepare for these specific hazards, please refer to the{" "}
+                    <strong className="text-primary">Understanding Impact Effects</strong> section below the simulator.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="safety" className="space-y-4 mt-4">
+            <div className="p-4 bg-background/50 rounded-lg border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="h-5 w-5 text-chart-3" />
+                <h4 className="text-lg font-bold text-foreground">Safe Zone Analysis</h4>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground flex items-center">
+                    Thermal Radiation Radius
+                    <TooltipInfo content="Distance at which thermal radiation causes severe burns and ignites flammable materials" />
+                    :
+                  </p>
+                  <p className="text-xl font-bold text-chart-5 font-mono">{thermalRadius} km</p>
+                  <p className="text-sm text-muted-foreground font-medium">Severe burns and fires</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground flex items-center">
+                    Blast Wave Radius
+                    <TooltipInfo content="Distance at which the atmospheric shockwave causes major structural damage" />
+                    :
+                  </p>
+                  <p className="text-xl font-bold text-destructive font-mono">{blastRadius} km</p>
+                  <p className="text-sm text-muted-foreground font-medium">Building collapse and severe damage</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-muted-foreground">Minimum Safe Distance:</p>
+                  <p className="text-xl font-bold text-chart-3 font-mono">{safeDistance} km</p>
+                  <p className="text-sm text-muted-foreground font-medium">Outside major danger zones</p>
+                </div>
+              </div>
+
+              {isInDangerZone && (
+                <div className="mt-4 p-3 bg-destructive/30 rounded border border-destructive">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                    <p className="text-sm font-bold text-foreground">
+                      WARNING: Your location ({params.distanceFromImpact.toFixed(3)} km) is within the blast radius!
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-background/50 rounded-lg border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="h-5 w-5 text-chart-1" />
+                <h4 className="text-lg font-bold text-foreground">Civilian Safety Steps</h4>
+              </div>
+              <ol className="space-y-3 text-sm text-foreground font-medium">
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">1.</span>
+                  <span>
+                    <strong>Immediate Evacuation:</strong> If within {blastRadius} km, evacuate perpendicular to impact
+                    trajectory immediately
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">2.</span>
+                  <span>
+                    <strong>Seek Underground Shelter:</strong> Basements, subway systems, or underground parking provide
+                    best protection
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">3.</span>
+                  <span>
+                    <strong>Protect from Thermal Flash:</strong> Stay away from windows, cover exposed skin, seek
+                    interior rooms
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">4.</span>
+                  <span>
+                    <strong>Prepare for Shockwave:</strong> Brace against sturdy structures, protect head and neck, stay
+                    low
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">5.</span>
+                  <span>
+                    <strong>Emergency Supplies:</strong> Water (3 days), non-perishable food, first aid, radio,
+                    flashlight
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <span className="font-bold text-primary flex-shrink-0">6.</span>
+                  <span>
+                    <strong>Post-Impact:</strong> Stay sheltered for 24-48 hours, monitor emergency broadcasts, avoid
+                    fallout
+                  </span>
+                </li>
+              </ol>
+            </div>
+
+            <div className="p-4 bg-background/50 rounded-lg border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Home className="h-5 w-5 text-chart-4" />
+                <h4 className="text-lg font-bold text-foreground">Safe Areas (Relative)</h4>
+              </div>
+              <ul className="space-y-2 text-sm text-foreground font-medium">
+                <li className="flex items-start gap-2">
+                  <span className="text-chart-3 flex-shrink-0">✓</span>
+                  <span>Locations beyond {safeDistance} km from impact point</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-chart-3 flex-shrink-0">✓</span>
+                  <span>Underground facilities and deep basements</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-chart-3 flex-shrink-0">✓</span>
+                  <span>Reinforced concrete structures away from windows</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-chart-3 flex-shrink-0">✓</span>
+                  <span>Areas shielded by mountains or terrain features</span>
+                </li>
+              </ul>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </Card>
+    </div>
+  )
+}
