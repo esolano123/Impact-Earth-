@@ -2,7 +2,7 @@
 
 This project fetches asteroid data from NASA's NEO API and displays it on a frontend.
 Below are instructions for setting up and running the app on Windows and Mac.
-
+*pre-requisite : have Node.js installed*
 
 1. Open Terminal / Command Prompt
 
@@ -10,7 +10,7 @@ Windows: Open Command Prompt or PowerShell
 Mac: Open Terminal
 
 Navigate to your project folder:
-cd path/to/AtroidTrackingSimApp
+cd path/to/Impact-Earth-
 
 
 
@@ -37,7 +37,6 @@ NASA_API_KEY=YOUR_NASA_API_KEY_HERE
 
 
 Mac:
-Command Prompt:
 touch .env.local
 
 Then open .env.local in a text editor and add:
